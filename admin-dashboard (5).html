@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GeoTrack Admin — Live Map</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0c0c0c; --s1: #111111; --s2: #161616; --s3: #1e1e1e; --s4: #262626;
+    --border: #2a2a2a; --border2: #383838;
+    --text: #f0f0f0; --sub: #888888; --faint: #505050;
+    --green: #22c55e; --green-dim: rgba(34,197,94,0.08); --green-b: rgba(34,197,94,0.2);
+    --blue: #60a5fa; --blue-dim: rgba(96,165,250,0.08); --blue-b: rgba(96,165,250,0.2);
+    --red: #f87171; --red-dim: rgba(248,113,113,0.08); --red-b: rgba(248,113,113,0.2);
+    --amber: #fbbf24;
+    --r: 8px; --rl: 12px;
+  }
+
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; -webkit-font-smoothing: antialiased; overflow: hidden; }
+
+  /* HEADER */
+  header { position: fixed; top: 0; left: 0; right: 0; z-index: 200; background: rgba(12,12,12,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); height: 52px; display: flex; align-items: center; padding: 0 20px; gap: 16px; }
+  .site-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .site-name span { color: var(--faint); font-weight: 400; }
+  .hdr-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+  .conn-row { display: flex; align-items: center; gap: 6px; }
+  .conn-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); transition: background 0.3s; }
+  .conn-dot.on { background: var(--green); animation: blink 2s ease-in-out infinite; }
+  .conn-dot.err { background: var(--red); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+  .conn-text { font-size: 12px; color: var(--faint); transition: color 0.3s; }
+  .conn-text.on { color: var(--green); }
+  .pill { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px; }
+  .pill-green { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-b); }
+  .pill-gray  { background: var(--s3); color: var(--sub); border: 1px solid var(--border); }
+  .live-row { display: flex; align-items: center; gap: 5px; }
+  .live-dot { width: 5px; height: 5px; background: var(--green); border-radius: 50%; animation: blink 2s ease-in-out infinite; }
+
+  /* LAYOUT — full screen map + side panel */
+  .layout { position: fixed; top: 52px; left: 0; right: 0; bottom: 0; display: flex; }
+
+  /* MAP */
+  #map { flex: 1; height: 100%; }
+
+  /* SIDE PANEL */
+  .side { width: 300px; flex-shrink: 0; background: var(--s1); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+
+  .side-head { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .side-title { font-size: 11px; font-weight: 600; color: var(--faint); text-transform: uppercase; letter-spacing: 0.8px; }
+
+  /* STATS */
+  .side-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+  .s-box { background: var(--s2); border: 1px solid var(--border); border-radius: var(--r); padding: 9px 11px; }
+  .s-box-label { font-size: 10px; font-weight: 500; color: var(--faint); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+  .s-box-val { font-family: 'Space Mono', monospace; font-size: 18px; font-weight: 700; color: var(--text); line-height: 1; }
+
+  /* USER LIST */
+  .user-list { flex: 1; overflow-y: auto; }
+  .user-card {
+    padding: 12px 14px; border-bottom: 1px solid var(--border);
+    cursor: pointer; transition: background 0.15s;
+    animation: slideIn 0.3s ease both;
+    position: relative;
+  }
+  @keyframes slideIn { from{opacity:0;transform:translateX(8px)} to{opacity:1;transform:translateX(0)} }
+  .user-card:hover { background: var(--s2); }
+  .user-card.selected { background: var(--s3); border-left: 2px solid var(--green); }
+  .user-card:last-child { border-bottom: none; }
+
+  .uc-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .uc-av { width: 34px; height: 34px; border-radius: var(--r); background: var(--s4); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700; color: var(--sub); flex-shrink: 0; position: relative; }
+  .uc-av-dot { position: absolute; bottom: -2px; right: -2px; width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--s1); }
+  .uc-av-dot.on  { background: var(--green); animation: blink 2s ease-in-out infinite; }
+  .uc-av-dot.off { background: var(--faint); }
+  .uc-name { font-size: 13px; font-weight: 500; color: var(--text); flex: 1; }
+  .uc-time { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--faint); }
+
+  .uc-data { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .uc-data-item { background: var(--s2); border: 1px solid var(--border); border-radius: 6px; padding: 5px 7px; }
+  .uc-data-key { font-size: 9px; font-weight: 500; color: var(--faint); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 2px; }
+  .uc-data-val { font-family: 'Space Mono', monospace; font-size: 10px; font-weight: 700; color: var(--text); }
+
+  .uc-btn-row { display: flex; gap: 6px; margin-top: 8px; }
+  .uc-btn { flex: 1; padding: 5px 8px; border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 4px; border: none; }
+  .uc-btn svg { width: 11px; height: 11px; }
+  .uc-btn-focus { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-b); }
+  .uc-btn-focus:hover { background: rgba(34,197,94,0.15); }
+  .uc-btn-gmaps { background: var(--blue-dim); color: var(--blue); border: 1px solid var(--blue-b); }
+  .uc-btn-gmaps:hover { background: rgba(96,165,250,0.15); }
+
+  .empty-state { padding: 40px 20px; text-align: center; color: var(--faint); font-size: 12px; line-height: 1.8; }
+  .empty-state svg { width: 28px; height: 28px; margin: 0 auto 10px; display: block; opacity: 0.2; }
+
+  /* DETAIL POPUP on map */
+  .map-popup { font-family: 'Inter', sans-serif !important; }
+
+  /* TOAST */
+  .toast-wrap { position: fixed; top: 64px; left: 50%; transform: translateX(-50%); z-index: 999; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
+  .toast { background: var(--s2); border: 1px solid var(--border); border-radius: var(--r); padding: 9px 14px; font-size: 12px; color: var(--text); display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.5); animation: tin 0.2s ease; white-space: nowrap; }
+  @keyframes tin { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+  .toast.ok   { border-color: var(--green-b); }
+  .toast.info { border-color: var(--blue-b); }
+  .t-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+  .toast.ok   .t-dot { background: var(--green); }
+  .toast.info .t-dot { background: var(--blue); }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Responsive */
+  @media(max-width: 700px) { .side { width: 260px; } }
+</style>
+</head>
+<body>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<header>
+  <div class="site-name">GeoTrack <span>/ Admin</span></div>
+  <div class="hdr-right">
+    <div class="conn-row">
+      <div class="conn-dot" id="connDot"></div>
+      <span class="conn-text" id="connText">Connecting...</span>
+    </div>
+    <div class="pill pill-green">
+      <div class="live-row"><div class="live-dot"></div>&nbsp;Live</div>
+    </div>
+    <div class="pill pill-gray" id="onlinePill">0 online</div>
+  </div>
+</header>
+
+<div class="layout">
+  <div id="map"></div>
+  <div class="side">
+    <div class="side-head">
+      <span class="side-title">Pengguna Aktif</span>
+      <span class="pill pill-gray" id="countPill">0</span>
+    </div>
+    <div class="side-stats">
+      <div class="s-box"><div class="s-box-label">Online</div><div class="s-box-val" id="s1">0</div></div>
+      <div class="s-box"><div class="s-box-label">Hari Ini</div><div class="s-box-val" id="s2">0</div></div>
+    </div>
+    <div class="user-list" id="userList">
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        Tiada pengguna aktif.<br>Tunggu seseorang buka<br>halaman check in.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Google Maps -->
+<script>
+  // Colours for each user
+  const COLORS = ['#22c55e','#60a5fa','#f59e0b','#e879f9','#fb923c','#34d399','#f472b6','#a78bfa'];
+  let colorMap = {};
+  let colorIdx = 0;
+
+  function getColor(id) {
+    if (!colorMap[id]) { colorMap[id] = COLORS[colorIdx % COLORS.length]; colorIdx++; }
+    return colorMap[id];
+  }
+
+  let map, sessions = {}, markers = {}, trails = {}, infoWindows = {};
+  let selectedId = null, todayCount = 0, boundsTimer = null;
+
+  function initMap() {
+    map = new google.maps.Map(document.getElementById('map'), {
+      center: { lat: 3.1390, lng: 101.6869 }, // KL default
+      zoom: 13,
+      mapId: 'geotrack_dark',
+      styles: [
+        { elementType: 'geometry', stylers: [{ color: '#0c0c0c' }] },
+        { elementType: 'labels.text.fill', stylers: [{ color: '#888888' }] },
+        { elementType: 'labels.text.stroke', stylers: [{ color: '#0c0c0c' }] },
+        { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#1e1e1e' }] },
+        { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#2a2a2a' }] },
+        { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#505050' }] },
+        { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#262626' }] },
+        { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#060608' }] },
+        { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+        { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+        { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#2a2a2a' }] },
+        { featureType: 'administrative.country', elementType: 'labels.text.fill', stylers: [{ color: '#888888' }] },
+        { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#888888' }] },
+      ],
+      disableDefaultUI: false,
+      zoomControl: true,
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: true,
+    });
+
+    // Start Firebase listener after map init
+    startFirebaseListener();
+  }
+
+  // ── Custom marker SVG ─────────────────────────
+  function makeMarkerIcon(name, color, isMoving) {
+    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+    const pulse = isMoving ? `<circle cx="22" cy="22" r="18" fill="${color}" opacity="0.15"><animate attributeName="r" values="14;22;14" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.15;0;0.15" dur="2s" repeatCount="indefinite"/></circle>` : '';
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="44" height="58" viewBox="0 0 44 58">
+        ${pulse}
+        <circle cx="22" cy="22" r="18" fill="${color}" opacity="0.2"/>
+        <circle cx="22" cy="22" r="14" fill="${color}"/>
+        <text x="22" y="27" text-anchor="middle" fill="white" font-family="Inter,sans-serif" font-size="10" font-weight="700">${initials}</text>
+        <path d="M22 38 L16 28 Q22 32 28 28 Z" fill="${color}"/>
+      </svg>`;
+    return {
+      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+      scaledSize: new google.maps.Size(44, 58),
+      anchor: new google.maps.Point(22, 56),
+    };
+  }
+
+  // ── Update/create marker ──────────────────────
+  function upsertMarker(s) {
+    if (!s.latitude || !s.longitude) return;
+    const pos   = { lat: s.latitude, lng: s.longitude };
+    const color = getColor(s.id);
+    const spd   = s.speed ? (s.speed * 3.6).toFixed(1) : 0;
+    const isMoving = s.speed > 0.5;
+
+    if (markers[s.id]) {
+      // Smooth animate to new position
+      animateMarker(markers[s.id], markers[s.id].getPosition(), pos);
+      markers[s.id].setIcon(makeMarkerIcon(s.name, color, isMoving));
+    } else {
+      markers[s.id] = new google.maps.Marker({
+        position: pos,
+        map,
+        icon: makeMarkerIcon(s.name, color, isMoving),
+        title: s.name,
+        zIndex: 100,
+      });
+
+      // Info window
+      infoWindows[s.id] = new google.maps.InfoWindow();
+
+      markers[s.id].addListener('click', () => {
+        Object.values(infoWindows).forEach(iw => iw.close());
+        const iw = infoWindows[s.id];
+        iw.setContent(buildInfoContent(s, color));
+        iw.open(map, markers[s.id]);
+        selectedId = s.id;
+        renderUserList();
+      });
+    }
+
+    // Update open info window
+    if (infoWindows[s.id] && infoWindows[s.id].getMap()) {
+      infoWindows[s.id].setContent(buildInfoContent(s, color));
+    }
+  }
+
+  function buildInfoContent(s, color) {
+    const spd = s.speed ? `${(s.speed*3.6).toFixed(1)} km/h` : '0 km/h';
+    const ts  = s.lastUpdate ? new Date(s.lastUpdate.seconds * 1000).toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
+    return `
+      <div style="font-family:Inter,sans-serif;padding:4px 2px;min-width:180px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <div style="width:32px;height:32px;border-radius:7px;background:${color};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;color:white;">${s.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)}</div>
+          <div>
+            <div style="font-weight:600;font-size:13px;color:#111;">${s.name}</div>
+            <div style="font-size:11px;color:#888;">Update: ${ts}</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <div style="background:#f5f5f5;border-radius:6px;padding:6px 8px;">
+            <div style="font-size:9px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">Kelajuan</div>
+            <div style="font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:#111;">${spd}</div>
+          </div>
+          <div style="background:#f5f5f5;border-radius:6px;padding:6px 8px;">
+            <div style="font-size:9px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">Accuracy</div>
+            <div style="font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:#111;">&plusmn;${Math.round(s.accuracy||0)}m</div>
+          </div>
+          <div style="background:#f5f5f5;border-radius:6px;padding:6px 8px;">
+            <div style="font-size:9px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">Jarak</div>
+            <div style="font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:#111;">${s.totalDistance < 1000 ? (s.totalDistance||0)+' m' : ((s.totalDistance||0)/1000).toFixed(2)+' km'}</div>
+          </div>
+          <div style="background:#f5f5f5;border-radius:6px;padding:6px 8px;">
+            <div style="font-size:9px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">Updates</div>
+            <div style="font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:#111;">${s.updateCount||0}</div>
+          </div>
+        </div>
+        <a href="https://www.google.com/maps?q=${s.latitude},${s.longitude}" target="_blank" style="display:block;margin-top:10px;text-align:center;background:#111;color:white;border-radius:6px;padding:7px;font-size:11px;font-weight:600;text-decoration:none;">Buka Google Maps</a>
+      </div>`;
+  }
+
+  // ── Smooth marker animation ───────────────────
+  function animateMarker(marker, from, to) {
+    if (!from) { marker.setPosition(to); return; }
+    const steps = 30, delay = 16;
+    const dLat  = (to.lat - from.lat()) / steps;
+    const dLng  = (to.lng - from.lng()) / steps;
+    let step = 0;
+    const interval = setInterval(() => {
+      step++;
+      marker.setPosition({ lat: from.lat() + dLat * step, lng: from.lng() + dLng * step });
+      if (step >= steps) clearInterval(interval);
+    }, delay);
+  }
+
+  // ── Trail polyline ─────────────────────────────
+  function addTrailPoint(id, lat, lng) {
+    if (!trails[id]) {
+      const color = getColor(id);
+      trails[id] = {
+        line: new google.maps.Polyline({
+          map,
+          path: [],
+          strokeColor: color,
+          strokeOpacity: 0.6,
+          strokeWeight: 3,
+          icons: [{ icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 2.5, strokeColor: color }, offset: '100%', repeat: '80px' }]
+        }),
+        points: []
+      };
+    }
+    trails[id].points.push({ lat, lng });
+    // Keep last 80 points
+    if (trails[id].points.length > 80) trails[id].points.shift();
+    trails[id].line.setPath(trails[id].points);
+  }
+
+  // ── Fit map to show all users ─────────────────
+  function fitBounds() {
+    const active = Object.values(sessions).filter(s => s.active && s.latitude);
+    if (!active.length) return;
+    if (active.length === 1) {
+      map.panTo({ lat: active[0].latitude, lng: active[0].longitude });
+      return;
+    }
+    const bounds = new google.maps.LatLngBounds();
+    active.forEach(s => bounds.extend({ lat: s.latitude, lng: s.longitude }));
+    map.fitBounds(bounds, { top: 60, right: 320, bottom: 60, left: 60 });
+  }
+
+  // ── Focus on one user ─────────────────────────
+  window.focusUser = function (id) {
+    selectedId = id;
+    const s = sessions[id];
+    if (s && s.latitude) {
+      map.panTo({ lat: s.latitude, lng: s.longitude });
+      map.setZoom(16);
+      Object.values(infoWindows).forEach(iw => iw.close());
+      if (infoWindows[id] && markers[id]) {
+        infoWindows[id].setContent(buildInfoContent(s, getColor(id)));
+        infoWindows[id].open(map, markers[id]);
+      }
+    }
+    renderUserList();
+  };
+
+  window.openGmapsUser = function (id) {
+    const s = sessions[id];
+    if (s && s.latitude) window.open(`https://www.google.com/maps?q=${s.latitude},${s.longitude}`, '_blank');
+  };
+
+  // ── Render side panel ─────────────────────────
+  function renderUserList() {
+    const active = Object.values(sessions).filter(s => s.active);
+    const list   = document.getElementById('userList');
+    document.getElementById('countPill').textContent = active.length;
+    document.getElementById('s1').textContent = active.length;
+    document.getElementById('onlinePill').textContent = `${active.length} online`;
+
+    if (!active.length) {
+      list.innerHTML = `<div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        Tiada pengguna aktif.<br>Tunggu seseorang buka<br>halaman check in.
+      </div>`; return;
+    }
+
+    list.innerHTML = active.sort((a,b) => (b.updateCount||0) - (a.updateCount||0)).map(s => {
+      const color  = getColor(s.id);
+      const isSel  = s.id === selectedId;
+      const ts     = s.lastUpdate ? timeAgo(new Date(s.lastUpdate.seconds * 1000)) : '—';
+      const spd    = s.speed ? `${(s.speed*3.6).toFixed(1)} km/h` : '0 km/h';
+      const acc    = s.accuracy ? `\u00b1${Math.round(s.accuracy)}m` : '—';
+      const dist   = s.totalDistance != null ? (s.totalDistance < 1000 ? s.totalDistance+'m' : (s.totalDistance/1000).toFixed(1)+'km') : '0m';
+      const hasLoc = s.latitude != null;
+
+      return `<div class="user-card ${isSel ? 'selected' : ''}" onclick="focusUser('${s.id}')">
+        <div class="uc-top">
+          <div class="uc-av" style="border-color:${color}30">
+            <span style="color:${color}">${s.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)}</span>
+            <div class="uc-av-dot ${hasLoc ? 'on' : 'off'}"></div>
+          </div>
+          <div class="uc-name">${esc(s.name)}</div>
+          <div class="uc-time">${ts}</div>
+        </div>
+        ${hasLoc ? `
+        <div class="uc-data">
+          <div class="uc-data-item"><div class="uc-data-key">Laju</div><div class="uc-data-val">${spd}</div></div>
+          <div class="uc-data-item"><div class="uc-data-key">Acc</div><div class="uc-data-val">${acc}</div></div>
+          <div class="uc-data-item"><div class="uc-data-key">Jarak</div><div class="uc-data-val">${dist}</div></div>
+        </div>
+        <div class="uc-btn-row">
+          <button class="uc-btn uc-btn-focus" onclick="event.stopPropagation();focusUser('${s.id}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+            Focus
+          </button>
+          <button class="uc-btn uc-btn-gmaps" onclick="event.stopPropagation();openGmapsUser('${s.id}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            Maps
+          </button>
+        </div>` : '<div style="font-size:11px;color:var(--faint);margin-top:4px;">Mengesan GPS...</div>'}
+      </div>`;
+    }).join('');
+  }
+
+  // ── Firebase ──────────────────────────────────
+  function startFirebaseListener() {
+    // Dynamically import Firebase
+    import('https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js').then(({ initializeApp }) => {
+      import('https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js').then(({ getFirestore, collection, onSnapshot, query, where }) => {
+
+        const app = initializeApp({
+          apiKey: "AIzaSyAKEBjSdoLFCgGJFFdLIzP0-_Xf_VK2Jtk",
+          authDomain: "trackingapps-fb953.firebaseapp.com",
+          projectId: "trackingapps-fb953",
+          storageBucket: "trackingapps-fb953.firebasestorage.app",
+          messagingSenderId: "803582755164",
+          appId: "1:803582755164:web:6f6d90970b5859c2fbc199"
+        });
+        const db = getFirestore(app);
+
+        const q = query(collection(db, 'live_sessions'), where('active', '==', true));
+        onSnapshot(q,
+          (snap) => {
+            document.getElementById('connDot').className   = 'conn-dot on';
+            document.getElementById('connText').textContent = 'Bersambung';
+            document.getElementById('connText').className   = 'conn-text on';
+
+            snap.docChanges().forEach(change => {
+              const data = { id: change.doc.id, ...change.doc.data() };
+
+              if (change.type === 'removed') {
+                if (sessions[data.id]) {
+                  toast('info', `${sessions[data.id].name} telah log keluar`);
+                  // Remove marker & trail
+                  if (markers[data.id])   { markers[data.id].setMap(null); delete markers[data.id]; }
+                  if (trails[data.id])    { trails[data.id].line.setMap(null); delete trails[data.id]; }
+                  if (infoWindows[data.id]) { infoWindows[data.id].close(); delete infoWindows[data.id]; }
+                  delete sessions[data.id];
+                  if (selectedId === data.id) selectedId = null;
+                }
+              } else {
+                const isNew = !sessions[data.id];
+                sessions[data.id] = data;
+
+                if (isNew) { toast('ok', `${data.name} mula tracking`); todayCount++; document.getElementById('s2').textContent = todayCount; }
+
+                if (data.latitude) {
+                  upsertMarker(data);
+                  addTrailPoint(data.id, data.latitude, data.longitude);
+                  // Auto-fit bounds after first person joins
+                  if (isNew) {
+                    clearTimeout(boundsTimer);
+                    boundsTimer = setTimeout(fitBounds, 1000);
+                  }
+                }
+              }
+            });
+
+            renderUserList();
+          },
+          (err) => {
+            document.getElementById('connDot').className   = 'conn-dot err';
+            document.getElementById('connText').textContent = 'Ralat';
+            document.getElementById('connText').className   = 'conn-text err';
+          }
+        );
+      });
+    });
+  }
+
+  // ── Helpers ───────────────────────────────────
+  function timeAgo(date) {
+    const s = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (s < 5)    return 'Baru';
+    if (s < 60)   return `${s}s`;
+    if (s < 3600) return `${Math.floor(s/60)}m`;
+    return `${Math.floor(s/3600)}j`;
+  }
+
+  function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function toast(type, msg) {
+    const wrap = document.getElementById('toastWrap');
+    const el   = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.innerHTML = `<div class="t-dot"></div><span>${msg}</span>`;
+    wrap.appendChild(el);
+    setTimeout(() => { el.style.opacity='0'; el.style.transition='opacity 0.2s'; setTimeout(()=>el.remove(),200); }, 4000);
+  }
+
+  setInterval(renderUserList, 10000);
+</script>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAoP33GcCojZOXIOzroa8LrGfkVeD6w1JI&callback=initMap&libraries=geometry" async defer></script>
+</body>
+</html>
