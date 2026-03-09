@@ -2,330 +2,463 @@
 <html lang="ms">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>GeoTrack — Live</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GeoTrack — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --bg: #0c0c0c; --s1: #111111; --s2: #161616; --s3: #1e1e1e; --s4: #262626;
-    --border: #2a2a2a; --border2: #383838;
-    --text: #f0f0f0; --sub: #888888; --faint: #505050;
-    --green: #22c55e; --green-dim: rgba(34,197,94,0.08); --green-b: rgba(34,197,94,0.2);
-    --blue: #60a5fa; --blue-dim: rgba(96,165,250,0.08); --blue-b: rgba(96,165,250,0.2);
-    --red: #f87171; --red-dim: rgba(248,113,113,0.08); --red-b: rgba(248,113,113,0.2);
-    --r: 8px; --rl: 12px;
-  }
-  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; -webkit-font-smoothing: antialiased; }
-  .page { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 20px; }
-  .card { width: 100%; max-width: 380px; background: var(--s1); border: 1px solid var(--border); border-radius: var(--rl); overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); animation: up 0.4s cubic-bezier(0.22,1,0.36,1) both; }
-  @keyframes up { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
-  .card-head { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-  .site-name { font-size: 13px; font-weight: 600; color: var(--text); }
-  .site-name span { color: var(--faint); font-weight: 400; }
-  .status-pill { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 500; }
-  .s-dot { width: 5px; height: 5px; border-radius: 50%; }
-  .s-dot.idle { background: var(--faint); }
-  .s-dot.tracking { background: var(--green); animation: blink 1.5s ease-in-out infinite; }
-  .s-dot.error { background: var(--red); }
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
-  .s-label.idle { color: var(--faint); }
-  .s-label.tracking { color: var(--green); }
-  .s-label.error { color: var(--red); }
-  .card-body { padding: 24px 20px; }
-  #nameView .title { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; margin-bottom: 5px; }
-  #nameView .desc { font-size: 13px; color: var(--sub); line-height: 1.6; margin-bottom: 22px; }
-  .label { display: block; font-size: 11px; font-weight: 500; color: var(--faint); margin-bottom: 7px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .input { width: 100%; background: var(--s2); border: 1px solid var(--border); border-radius: var(--r); padding: 11px 13px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; outline: none; -webkit-appearance: none; transition: border-color 0.2s, background 0.2s, box-shadow 0.2s; margin-bottom: 12px; }
-  .input:focus { border-color: var(--border2); background: var(--s3); box-shadow: 0 0 0 3px rgba(255,255,255,0.03); }
-  .input::placeholder { color: var(--faint); }
-  .input.err { border-color: var(--red-b) !important; animation: shake 0.3s ease; }
-  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
-  .btn-start { width: 100%; padding: 12px; background: var(--text); color: var(--bg); border: none; border-radius: var(--r); font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s, transform 0.15s; display: flex; align-items: center; justify-content: center; gap: 7px; }
-  .btn-start:hover { background: #fff; transform: translateY(-1px); }
-  #trackView { display: none; }
-  .track-header { margin-bottom: 16px; }
-  .track-name { font-size: 16px; font-weight: 600; letter-spacing: -0.2px; color: var(--text); margin-bottom: 3px; }
-  .track-since { font-size: 12px; color: var(--faint); }
-  .loc-live { background: var(--s2); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; margin-bottom: 14px; transition: border-color 0.3s; }
-  .loc-live.active { border-color: var(--green-b); }
-  .loc-live.searching { border-color: var(--blue-b); }
-  .loc-live.lost { border-color: var(--red-b); }
-  .loc-live-top { padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
-  .loc-pulse { width: 32px; height: 32px; border-radius: var(--r); display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.3s; }
-  .active .loc-pulse { background: var(--green-dim); }
-  .searching .loc-pulse { background: var(--blue-dim); }
-  .lost .loc-pulse { background: var(--red-dim); }
-  .loc-pulse svg { width: 15px; height: 15px; }
-  .arc { animation: rot 1s linear infinite; transform-origin: 12px 12px; }
-  @keyframes rot { to{transform:rotate(360deg)} }
-  .loc-live-title { font-size: 12px; font-weight: 500; margin-bottom: 1px; transition: color 0.3s; }
-  .active .loc-live-title { color: var(--green); }
-  .searching .loc-live-title { color: var(--blue); }
-  .lost .loc-live-title { color: var(--red); }
-  .loc-live-sub { font-size: 11px; color: var(--faint); }
-  .loc-live-update { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--green); margin-left: auto; white-space: nowrap; }
-  .coords-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 14px 12px; border-top: 1px solid var(--border); }
-  .coord-item { display: flex; flex-direction: column; gap: 2px; }
-  .coord-key { font-family: 'Space Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--faint); }
-  .coord-val { font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700; color: var(--green); }
-  .stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 14px; }
-  .stat-box { background: var(--s2); border: 1px solid var(--border); border-radius: var(--r); padding: 10px 12px; }
-  .stat-box-label { font-size: 10px; font-weight: 500; color: var(--faint); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-  .stat-box-val { font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700; color: var(--text); }
-  .btn-stop { width: 100%; padding: 11px; background: var(--red-dim); border: 1px solid var(--red-b); color: var(--red); font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; border-radius: var(--r); cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 7px; }
-  .btn-stop:hover { background: rgba(248,113,113,0.15); }
-  #stoppedView { display: none; text-align: center; animation: fadeUp 0.4s ease both; }
-  @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
-  .stopped-ring { width: 60px; height: 60px; border-radius: 50%; border: 1px solid var(--border); background: var(--s2); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; }
-  .stopped-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 5px; }
-  .stopped-desc { font-size: 13px; color: var(--sub); line-height: 1.6; margin-bottom: 16px; }
-  .stopped-stats { background: var(--s2); border: 1px solid var(--border); border-radius: var(--r); padding: 12px 14px; font-family: 'Space Mono', monospace; font-size: 11px; color: var(--sub); line-height: 1.9; text-align: left; margin-bottom: 14px; }
-  .stopped-stats b { color: var(--text); }
-  .btn-restart { width: 100%; padding: 11px; background: transparent; border: 1px solid var(--border); color: var(--sub); font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; border-radius: var(--r); cursor: pointer; transition: all 0.15s; }
-  .btn-restart:hover { border-color: var(--border2); color: var(--text); }
-  ::-webkit-scrollbar { width: 3px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:      #0a0a0a;
+  --surface: #111;
+  --s2:      #161616;
+  --s3:      #1e1e1e;
+  --border:  #222;
+  --border2: #333;
+  --text:    #f2f2f2;
+  --sub:     #666;
+  --faint:   #3a3a3a;
+  --green:   #3ecf8e;
+  --green-b: rgba(62,207,142,0.2);
+  --green-d: rgba(62,207,142,0.07);
+  --blue:    #5b9cf6;
+  --blue-b:  rgba(91,156,246,0.2);
+  --blue-d:  rgba(91,156,246,0.07);
+  --red:     #f16a6a;
+  --red-b:   rgba(241,106,106,0.2);
+  --red-d:   rgba(241,106,106,0.07);
+  --amber:   #e6a817;
+  --r: 10px;
+}
+html { background: var(--bg); }
+body { color: var(--text); font-family: 'Geist', system-ui, sans-serif; font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+
+/* NAV */
+nav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(10,10,10,0.9); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  height: 52px; padding: 0 28px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.brand { font-size: 14px; font-weight: 600; color: var(--text); }
+.nav-r { display: flex; align-items: center; gap: 14px; }
+.conn { display: flex; align-items: center; gap: 6px; }
+.conn-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); transition: background 0.3s; }
+.conn-dot.on  { background: var(--green); animation: blink 2s ease-in-out infinite; }
+.conn-dot.err { background: var(--red); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+.conn-text { font-size: 12px; color: var(--sub); transition: color 0.3s; }
+.conn-text.on  { color: var(--green); }
+.conn-text.err { color: var(--red); }
+.chip { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px; border: 1px solid var(--border2); color: var(--sub); }
+.chip-green { background: var(--green-d); color: var(--green); border-color: var(--green-b); }
+.live-chip { display: flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 20px; background: var(--green-d); border: 1px solid var(--green-b); }
+.live-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); animation: blink 2s ease-in-out infinite; }
+.live-text { font-size: 11px; font-weight: 500; color: var(--green); }
+
+/* LAYOUT */
+.wrap { max-width: 1400px; margin: 0 auto; padding: 0 28px; }
+
+/* STATS */
+.stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; padding: 24px 0 0; }
+.stat {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
+  padding: 18px 20px;
+  animation: up 0.4s ease both;
+  transition: border-color 0.2s;
+}
+.stat:hover { border-color: var(--border2); }
+@keyframes up { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+.stat-label { font-size: 11px; font-weight: 500; color: var(--sub); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.stat-val   { font-size: 28px; font-weight: 700; letter-spacing: -1px; color: var(--text); line-height: 1; }
+
+/* GRID */
+.grid { display: grid; grid-template-columns: 1fr 290px; gap: 14px; padding: 14px 0 48px; }
+
+/* PANEL */
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; animation: up 0.4s ease both; }
+.panel-head { padding: 12px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.panel-title { font-size: 11px; font-weight: 600; color: var(--sub); text-transform: uppercase; letter-spacing: 0.6px; }
+
+/* MAP */
+.map-panel { display: flex; flex-direction: column; }
+#mapFrame { width: 100%; height: 320px; border: none; display: none; }
+.map-empty { height: 320px; background: var(--s2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+.map-empty svg { width: 24px; height: 24px; color: var(--faint); }
+.map-empty p { font-size: 12px; color: var(--sub); }
+.map-foot { padding: 11px 18px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+.map-coord { font-size: 11px; color: var(--sub); flex: 1; font-variant-numeric: tabular-nums; }
+
+/* BUTTONS */
+.btn { padding: 6px 12px; border-radius: 8px; font-family: inherit; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 5px; white-space: nowrap; border: 1px solid var(--border2); background: transparent; color: var(--sub); }
+.btn svg { width: 12px; height: 12px; }
+.btn:hover { border-color: #555; color: var(--text); }
+.btn-sm { padding: 5px 10px; font-size: 11px; border-radius: 7px; }
+.btn-danger { color: var(--red); border-color: var(--red-b); }
+.btn-danger:hover { background: var(--red-d); border-color: var(--red-b); color: var(--red); }
+
+/* TABLE */
+.table-bar { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.search-wrap { position: relative; flex: 1; min-width: 140px; }
+.search-ic { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); pointer-events: none; }
+.search-ic svg { width: 12px; height: 12px; color: var(--sub); }
+.search-inp {
+  width: 100%; background: var(--s2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 7px 10px 7px 28px; color: var(--text);
+  font-family: inherit; font-size: 13px; outline: none;
+  transition: border-color 0.2s;
+}
+.search-inp:focus { border-color: var(--border2); }
+.search-inp::placeholder { color: var(--sub); }
+
+.tscroll { overflow-x: auto; max-height: 380px; overflow-y: auto; }
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  font-size: 11px; font-weight: 500; color: var(--sub);
+  padding: 10px 16px; text-align: left;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface); position: sticky; top: 0; z-index: 1;
+  text-transform: uppercase; letter-spacing: 0.4px;
+}
+tbody td { padding: 11px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: var(--s2); }
+
+.td-name { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+.td-av { width: 26px; height: 26px; border-radius: 6px; background: var(--s3); color: var(--sub); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; flex-shrink: 0; }
+.td-coord { font-size: 11px; color: var(--sub); font-variant-numeric: tabular-nums; }
+.td-time  { font-size: 11px; color: var(--sub); }
+.td-num   { font-size: 11px; color: var(--sub); }
+.acc-good { color: var(--green); }
+.acc-mid  { color: var(--amber); }
+.acc-bad  { color: var(--red); }
+
+.src-tag { font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 5px; }
+.src-ci  { background: var(--green-d); color: var(--green); border: 1px solid var(--green-b); }
+.src-web { background: var(--blue-d);  color: var(--blue);  border: 1px solid var(--blue-b); }
+
+.tr-new td { background: rgba(62,207,142,0.02) !important; }
+.acts { display: flex; gap: 5px; }
+.act { font-family: inherit; font-size: 11px; font-weight: 500; padding: 4px 9px; border-radius: 6px; cursor: pointer; transition: all 0.15s; }
+.act-map { background: var(--blue-d); color: var(--blue); border: 1px solid var(--blue-b); }
+.act-map:hover { background: rgba(91,156,246,0.14); }
+.act-del { background: var(--red-d); color: var(--red); border: 1px solid var(--red-b); }
+.act-del:hover { background: rgba(241,106,106,0.14); }
+
+.empty-row { padding: 40px; text-align: center; font-size: 13px; color: var(--sub); }
+.empty-row svg { width: 22px; height: 22px; margin: 0 auto 10px; display: block; opacity: 0.2; }
+
+/* FEED */
+.right-col { display: flex; flex-direction: column; gap: 12px; }
+.feed-body { overflow-y: auto; max-height: 320px; }
+.feed-item { padding: 11px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; cursor: pointer; transition: background 0.15s; animation: slideIn 0.25s ease; }
+@keyframes slideIn { from{opacity:0;transform:translateX(5px)} to{opacity:1;transform:translateX(0)} }
+.feed-item:hover { background: var(--s2); }
+.feed-item:last-child { border-bottom: none; }
+.feed-av { width: 30px; height: 30px; border-radius: 7px; background: var(--s3); border: 1px solid var(--border2); color: var(--sub); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; flex-shrink: 0; }
+.feed-name  { font-size: 13px; font-weight: 500; color: var(--text); }
+.feed-coord { font-size: 10px; color: var(--sub); margin-top: 1px; font-variant-numeric: tabular-nums; }
+.feed-time  { font-size: 10px; color: var(--sub); margin-left: auto; white-space: nowrap; }
+.new-tag { font-size: 9px; font-weight: 600; padding: 1px 6px; border-radius: 4px; background: var(--green-d); color: var(--green); border: 1px solid var(--green-b); animation: pop 0.2s ease; }
+@keyframes pop { from{transform:scale(0)} to{transform:scale(1)} }
+.feed-empty { padding: 32px 16px; text-align: center; font-size: 12px; color: var(--sub); }
+
+/* TOAST */
+.toast-wrap { position: fixed; top: 64px; right: 20px; z-index: 999; display: flex; flex-direction: column; gap: 7px; }
+.toast { background: var(--s3); border: 1px solid var(--border2); border-radius: var(--r); padding: 10px 14px; font-size: 12px; color: var(--text); min-width: 210px; display: flex; align-items: center; gap: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); animation: tin 0.2s ease; }
+@keyframes tin { from{opacity:0;transform:translateX(8px)} to{opacity:1;transform:translateX(0)} }
+.toast.ok   { border-color: var(--green-b); }
+.toast.info { border-color: var(--blue-b); }
+.toast.err  { border-color: var(--red-b); }
+.t-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.toast.ok   .t-dot { background: var(--green); }
+.toast.info .t-dot { background: var(--blue); }
+.toast.err  .t-dot { background: var(--red); }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+@media(max-width:1040px) { .grid { grid-template-columns: 1fr; } .stats { grid-template-columns: repeat(2,1fr); } }
+@media(max-width:480px)  { .stats { grid-template-columns: repeat(2,1fr); } .wrap { padding: 0 16px; } nav { padding: 0 16px; } }
 </style>
 </head>
 <body>
-<div class="page">
-  <div class="card">
-    <div class="card-head">
-      <div class="site-name">GeoTrack <span>/ Live</span></div>
-      <div class="status-pill">
-        <div class="s-dot idle" id="sDot"></div>
-        <span class="s-label idle" id="sLabel">Idle</span>
-      </div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<nav>
+  <div class="brand">GeoTrack</div>
+  <div class="nav-r">
+    <div class="conn">
+      <div class="conn-dot" id="connDot"></div>
+      <span class="conn-text" id="connText">Connecting</span>
     </div>
-    <div class="card-body">
+    <div class="live-chip">
+      <div class="live-dot"></div>
+      <span class="live-text">Live</span>
+    </div>
+    <div class="chip" id="totalChip">0 rekod</div>
+  </div>
+</nav>
 
-      <!-- Step 1 -->
-      <div id="nameView">
-        <div class="title">Masukkan Nama</div>
-        <p class="desc">Lokasi anda akan dikesan dan dikongsi secara langsung dengan admin.</p>
-        <label class="label">Nama penuh</label>
-        <input type="text" class="input" id="nameInp" placeholder="Nama anda..." autocomplete="name" />
-        <button class="btn-start" onclick="startTracking()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-          Mula Tracking
-        </button>
+<div class="wrap">
+  <div class="stats">
+    <div class="stat" style="animation-delay:0s">   <div class="stat-label">Total</div>       <div class="stat-val" id="s1">0</div></div>
+    <div class="stat" style="animation-delay:.05s"><div class="stat-label">Hari Ini</div>    <div class="stat-val" id="s2">0</div></div>
+    <div class="stat" style="animation-delay:.1s"> <div class="stat-label">Check In</div>    <div class="stat-val" id="s3">0</div></div>
+    <div class="stat" style="animation-delay:.15s"><div class="stat-label">1 Jam Lepas</div> <div class="stat-val" id="s4">0</div></div>
+  </div>
+
+  <div class="grid">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+
+      <!-- MAP -->
+      <div class="panel map-panel" style="animation-delay:.08s">
+        <div class="panel-head">
+          <span class="panel-title">Peta</span>
+          <span class="chip" id="mapLabel">—</span>
+        </div>
+        <div class="map-empty" id="mapEmpty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+          <p>Pilih rekod untuk papar lokasi</p>
+        </div>
+        <iframe id="mapFrame" allowfullscreen></iframe>
+        <div class="map-foot">
+          <span class="map-coord" id="mapCoord">—</span>
+          <button class="btn btn-sm" onclick="openGmaps()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            Google Maps
+          </button>
+        </div>
       </div>
 
-      <!-- Step 2 -->
-      <div id="trackView">
-        <div class="track-header">
-          <div class="track-name" id="trackName">—</div>
-          <div class="track-since" id="trackSince">—</div>
-        </div>
-        <div class="loc-live searching" id="locLive">
-          <div class="loc-live-top">
-            <div class="loc-pulse" id="locPulse">
-              <svg viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round"><circle class="arc" cx="12" cy="12" r="9" stroke-dasharray="28 6"/></svg>
-            </div>
-            <div style="flex:1">
-              <div class="loc-live-title" id="liveTitle">Mengesan lokasi...</div>
-              <div class="loc-live-sub" id="liveSub">Mendapatkan GPS pertama</div>
-            </div>
-            <div class="loc-live-update" id="lastUpdate" style="display:none"></div>
+      <!-- TABLE -->
+      <div class="panel" style="animation-delay:.1s">
+        <div class="panel-head"><span class="panel-title">Rekod</span></div>
+        <div class="table-bar">
+          <div class="search-wrap">
+            <div class="search-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+            <input class="search-inp" id="searchInp" placeholder="Cari nama..." oninput="renderTable()">
           </div>
-          <div class="coords-grid" id="coordsGrid" style="display:none">
-            <div class="coord-item"><span class="coord-key">Latitude</span><span class="coord-val" id="latVal">—</span></div>
-            <div class="coord-item"><span class="coord-key">Longitude</span><span class="coord-val" id="lngVal">—</span></div>
-            <div class="coord-item"><span class="coord-key">Accuracy</span><span class="coord-val" id="accVal">—</span></div>
-            <div class="coord-item"><span class="coord-key">Kelajuan</span><span class="coord-val" id="spdVal">—</span></div>
-          </div>
+          <button class="btn" onclick="exportCSV()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            CSV
+          </button>
+          <button class="btn" onclick="exportJSON()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            JSON
+          </button>
+          <button class="btn btn-danger" onclick="clearAll()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+            Padam Semua
+          </button>
         </div>
-        <div class="stats-row">
-          <div class="stat-box"><div class="stat-box-label">Updates</div><div class="stat-box-val" id="updateCount">0</div></div>
-          <div class="stat-box"><div class="stat-box-label">Masa</div><div class="stat-box-val" id="elapsed">00:00</div></div>
-          <div class="stat-box"><div class="stat-box-label">Jarak</div><div class="stat-box-val" id="distVal">0 m</div></div>
+        <div class="tscroll">
+          <table>
+            <thead>
+              <tr><th>#</th><th>Nama</th><th>Koordinat</th><th>Accuracy</th><th>Sumber</th><th>Masa</th><th></th></tr>
+            </thead>
+            <tbody id="tableBody">
+              <tr><td colspan="7"><div class="empty-row">Menghubungi pangkalan data...</div></td></tr>
+            </tbody>
+          </table>
         </div>
-        <button class="btn-stop" onclick="stopTracking()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-          Henti Tracking
-        </button>
       </div>
 
-      <!-- Step 3 -->
-      <div id="stoppedView">
-        <div class="stopped-ring">
-          <svg viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-        </div>
-        <div class="stopped-title">Tracking Dihenti</div>
-        <p class="stopped-desc">Lokasi anda tidak lagi dikongsi dengan admin.</p>
-        <div class="stopped-stats" id="stoppedStats"></div>
-        <button class="btn-restart" onclick="restartTracking()">Mula Semula</button>
-      </div>
+    </div>
 
+    <!-- RIGHT -->
+    <div class="right-col">
+      <div class="panel" style="animation-delay:.06s">
+        <div class="panel-head">
+          <span class="panel-title">Aktiviti</span>
+          <span class="chip" id="feedChip">0 baru</span>
+        </div>
+        <div class="feed-body" id="feedBody">
+          <div class="feed-empty">Menunggu check in pertama...</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-  import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import { getFirestore, collection, onSnapshot, deleteDoc, doc, query, orderBy, writeBatch } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyAKEBjSdoLFCgGJFFdLIzP0-_Xf_VK2Jtk",
-    authDomain: "trackingapps-fb953.firebaseapp.com",
-    projectId: "trackingapps-fb953",
-    storageBucket: "trackingapps-fb953.firebasestorage.app",
-    messagingSenderId: "803582755164",
-    appId: "1:803582755164:web:6f6d90970b5859c2fbc199",
-    measurementId: "G-8QH68HLRL5"
-  };
+const db = getFirestore(initializeApp({
+  apiKey: "AIzaSyAKEBjSdoLFCgGJFFdLIzP0-_Xf_VK2Jtk",
+  authDomain: "trackingapps-fb953.firebaseapp.com",
+  projectId: "trackingapps-fb953",
+  storageBucket: "trackingapps-fb953.firebasestorage.app",
+  messagingSenderId: "803582755164",
+  appId: "1:803582755164:web:6f6d90970b5859c2fbc199"
+}));
 
-  const app = initializeApp(firebaseConfig);
-  const db  = getFirestore(app);
+let records = [], curLat = null, curLng = null, firstLoad = true, newCount = 0;
 
-  let userName = '', sessionId = null, watchId = null;
-  let timerInterval = null, startTime = null;
-  let updateCount = 0, lastPos = null, totalDist = 0;
+onSnapshot(query(collection(db, 'locations'), orderBy('timestamp', 'desc')),
+  snap => {
+    document.getElementById('connDot').className   = 'conn-dot on';
+    document.getElementById('connText').textContent = 'Bersambung';
+    document.getElementById('connText').className   = 'conn-text on';
 
-  window.startTracking = async function () {
-    const name = document.getElementById('nameInp').value.trim();
-    if (!name) {
-      const inp = document.getElementById('nameInp');
-      inp.classList.add('err'); inp.focus();
-      setTimeout(() => inp.classList.remove('err'), 400); return;
+    const added = [];
+    snap.docChanges().forEach(c => { if (c.type === 'added' && !firstLoad) { added.push(c.doc); newCount++; } });
+    records = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    if (!firstLoad && added.length) {
+      added.forEach(d => { prependFeed(d.data()); toast('ok', `${d.data().name} check in`); });
+      document.getElementById('feedChip').textContent = `${newCount} baru`;
     }
-    if (!navigator.geolocation) { alert('Browser tidak sokong Geolocation.'); return; }
 
-    userName = name;
-    sessionId = `${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
-    startTime = Date.now(); updateCount = 0; totalDist = 0; lastPos = null;
-
-    document.getElementById('nameView').style.display  = 'none';
-    document.getElementById('trackView').style.display = 'block';
-    document.getElementById('trackName').textContent   = name;
-    document.getElementById('trackSince').textContent  = 'Bermula ' + new Date().toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' });
-    setStatus('tracking', 'Live');
-
-    await setDoc(doc(db, 'live_sessions', sessionId), {
-      name, sessionId, startedAt: serverTimestamp(), active: true,
-      latitude: null, longitude: null, accuracy: null, speed: null,
-      heading: null, lastUpdate: serverTimestamp(), updateCount: 0, totalDistance: 0, trail: []
-    });
-
-    timerInterval = setInterval(updateTimer, 1000);
-    watchId = navigator.geolocation.watchPosition(onPosition, onError,
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
-    window.addEventListener('beforeunload', cleanup);
-  };
-
-  async function onPosition(pos) {
-    const { latitude, longitude, accuracy, speed, heading } = pos.coords;
-    updateCount++;
-    if (lastPos) totalDist += haversine(lastPos.lat, lastPos.lng, latitude, longitude);
-    lastPos = { lat: latitude, lng: longitude };
-
-    const now = new Date().toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-    try {
-      // Store trail as array of {lat,lng,t} — keep last 50 points
-      const trailPoint = { lat: latitude, lng: longitude, t: Date.now() };
-      await setDoc(doc(db, 'live_sessions', sessionId), {
-        name: userName, sessionId, active: true,
-        latitude, longitude, accuracy, speed: speed || 0, heading: heading || null,
-        lastUpdate: serverTimestamp(), updateCount,
-        totalDistance: Math.round(totalDist),
-        lastPoint: trailPoint
-      }, { merge: true });
-
-      // Store trail separately for path drawing
-      await setDoc(doc(db, 'live_trails', sessionId), {
-        sessionId, name: userName,
-        [`p_${updateCount}`]: trailPoint
-      }, { merge: true });
-
-    } catch (e) { console.error(e); }
-
-    // UI update
-    document.getElementById('latVal').textContent  = latitude.toFixed(6);
-    document.getElementById('lngVal').textContent  = longitude.toFixed(6);
-    document.getElementById('accVal').textContent  = `\u00b1${Math.round(accuracy)}m`;
-    document.getElementById('spdVal').textContent  = speed ? `${(speed*3.6).toFixed(1)} km/h` : '0 km/h';
-    document.getElementById('coordsGrid').style.display = 'grid';
-    const lu = document.getElementById('lastUpdate');
-    lu.style.display = 'block'; lu.textContent = now;
-    document.getElementById('updateCount').textContent = updateCount;
-    document.getElementById('distVal').textContent = totalDist < 1000 ? `${Math.round(totalDist)} m` : `${(totalDist/1000).toFixed(2)} km`;
-    setLocState('active', 'Lokasi aktif', `Update ke-${updateCount} · ${now}`);
-  }
-
-  function onError() { setLocState('lost', 'Isyarat lemah', 'Cuba bergerak ke kawasan terbuka'); setStatus('error', 'Lemah'); }
-
-  window.stopTracking = async function () {
-    await cleanup();
-    const elapsed = formatTime(Math.floor((Date.now() - startTime) / 1000));
-    document.getElementById('stoppedStats').innerHTML =
-      `<b>Nama</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${esc(userName)}<br>` +
-      `<b>Masa</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${elapsed}<br>` +
-      `<b>Updates</b>&nbsp;&nbsp;${updateCount} kali<br>` +
-      `<b>Jarak</b>&nbsp;&nbsp;&nbsp;&nbsp;${totalDist < 1000 ? Math.round(totalDist)+' m' : (totalDist/1000).toFixed(2)+' km'}`;
-    document.getElementById('trackView').style.display   = 'none';
-    document.getElementById('stoppedView').style.display = 'block';
-    setStatus('idle', 'Selesai');
-  };
-
-  async function cleanup() {
-    if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
-    if (timerInterval)    { clearInterval(timerInterval); timerInterval = null; }
-    if (sessionId) {
-      try { await setDoc(doc(db, 'live_sessions', sessionId), { active: false, endedAt: serverTimestamp() }, { merge: true }); } catch {}
+    if (firstLoad) {
+      const fb = document.getElementById('feedBody');
+      fb.innerHTML = '';
+      if (records.length) records.slice(0, 15).forEach(r => appendFeed(r));
+      else fb.innerHTML = '<div class="feed-empty">Belum ada check in.</div>';
+      firstLoad = false;
     }
+
+    renderTable(); updateStats();
+  },
+  err => {
+    document.getElementById('connDot').className   = 'conn-dot err';
+    document.getElementById('connText').textContent = 'Ralat';
+    document.getElementById('connText').className   = 'conn-text err';
+    toast('err', err.message);
+  }
+);
+
+function makeFeedEl(data, isNew) {
+  const t   = data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' }) : '—';
+  const div = document.createElement('div');
+  div.className = 'feed-item';
+  div.innerHTML = `
+    <div class="feed-av">${ini(data.name)}</div>
+    <div style="flex:1;min-width:0">
+      <div class="feed-name">${esc(data.name)} ${isNew ? '<span class="new-tag">Baru</span>' : ''}</div>
+      <div class="feed-coord">${(data.latitude||0).toFixed(4)}, ${(data.longitude||0).toFixed(4)}</div>
+    </div>
+    <div class="feed-time">${t}</div>`;
+  div.onclick = () => showMap(data.latitude, data.longitude, data.name);
+  return div;
+}
+function prependFeed(data) {
+  const fb = document.getElementById('feedBody');
+  const em = fb.querySelector('.feed-empty');
+  if (em) em.remove();
+  fb.insertBefore(makeFeedEl(data, true), fb.firstChild);
+}
+function appendFeed(data) {
+  document.getElementById('feedBody').appendChild(makeFeedEl(data, false));
+}
+
+window.renderTable = function () {
+  const sq = document.getElementById('searchInp').value.toLowerCase();
+  const f  = records.filter(r => (r.name || '').toLowerCase().includes(sq));
+  const tb = document.getElementById('tableBody');
+
+  if (!f.length) {
+    tb.innerHTML = `<tr><td colspan="7"><div class="empty-row">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      ${records.length === 0 ? 'Belum ada rekod.' : 'Tiada rekod sepadan.'}
+    </div></td></tr>`; return;
   }
 
-  window.restartTracking = function () {
-    sessionId = null; updateCount = 0; totalDist = 0; lastPos = null;
-    document.getElementById('nameInp').value = '';
-    document.getElementById('stoppedView').style.display = 'none';
-    document.getElementById('nameView').style.display    = 'block';
-    document.getElementById('coordsGrid').style.display  = 'none';
-    document.getElementById('lastUpdate').style.display  = 'none';
-    setStatus('idle', 'Idle');
-  };
+  tb.innerHTML = f.map((r, i) => {
+    const ts   = r.timestamp ? new Date(r.timestamp.seconds * 1000) : null;
+    const tStr = ts ? ts.toLocaleDateString('ms-MY', { day: '2-digit', month: 'short' }) + ' ' + ts.toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' }) : '—';
+    const ac   = r.accuracy < 20 ? 'acc-good' : r.accuracy < 100 ? 'acc-mid' : 'acc-bad';
+    const src  = r.source === 'checkin' ? '<span class="src-tag src-ci">Check In</span>' : '<span class="src-tag src-web">Web</span>';
+    const isN  = ts && Date.now() - ts.getTime() < 300000;
+    return `<tr class="${isN ? 'tr-new' : ''}">
+      <td class="td-num">${String(i + 1).padStart(2, '0')}</td>
+      <td><div class="td-name"><div class="td-av">${ini(r.name)}</div>${esc(r.name)}</div></td>
+      <td class="td-coord">${(r.latitude||0).toFixed(5)}, ${(r.longitude||0).toFixed(5)}</td>
+      <td class="td-coord ${ac}">±${Math.round(r.accuracy || 0)}m</td>
+      <td>${src}</td>
+      <td class="td-time">${tStr}</td>
+      <td><div class="acts">
+        <button class="act act-map" onclick="showMap(${r.latitude},${r.longitude},'${esc(r.name)}')">Peta</button>
+        <button class="act act-del" onclick="delRec('${r.id}','${esc(r.name)}')">Padam</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+};
 
-  function setStatus(state, label) {
-    document.getElementById('sDot').className = `s-dot ${state}`;
-    document.getElementById('sLabel').className = `s-label ${state}`;
-    document.getElementById('sLabel').textContent = label;
-  }
+function updateStats() {
+  const today = new Date().toDateString(), h1 = Date.now() - 3600000;
+  document.getElementById('s1').textContent = records.length;
+  document.getElementById('s2').textContent = records.filter(r => r.timestamp && new Date(r.timestamp.seconds * 1000).toDateString() === today).length;
+  document.getElementById('s3').textContent = records.filter(r => r.source === 'checkin').length;
+  document.getElementById('s4').textContent = records.filter(r => r.timestamp && r.timestamp.seconds * 1000 > h1).length;
+  document.getElementById('totalChip').textContent = `${records.length} rekod`;
+}
 
-  function setLocState(state, title, sub) {
-    document.getElementById('locLive').className = `loc-live ${state}`;
-    document.getElementById('liveTitle').textContent = title;
-    document.getElementById('liveSub').textContent = sub;
-    const icons = {
-      active:    `<svg viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>`,
-      searching: `<svg viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round"><circle class="arc" cx="12" cy="12" r="9" stroke-dasharray="28 6"/></svg>`,
-      lost:      `<svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`
-    };
-    document.getElementById('locPulse').innerHTML = icons[state] || icons.searching;
-  }
+window.showMap = function (lat, lng, name) {
+  curLat = lat; curLng = lng;
+  const f = document.getElementById('mapFrame');
+  f.src = `https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.008},${lat - 0.008},${lng + 0.008},${lat + 0.008}&layer=mapnik&marker=${lat},${lng}`;
+  f.style.display = 'block';
+  document.getElementById('mapEmpty').style.display = 'none';
+  document.getElementById('mapLabel').textContent   = name || '—';
+  document.getElementById('mapCoord').textContent   = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  toast('info', `Lokasi ${name || ''}`);
+};
 
-  function updateTimer() {
-    const s = Math.floor((Date.now() - startTime) / 1000);
-    document.getElementById('elapsed').textContent = formatTime(s);
-  }
+window.openGmaps = function () {
+  if (!curLat) { toast('info', 'Pilih rekod dahulu'); return; }
+  window.open(`https://www.google.com/maps?q=${curLat},${curLng}`, '_blank');
+};
 
-  function formatTime(s) {
-    const m = Math.floor(s/60), sec = s%60;
-    return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
-  }
+window.delRec = async function (id, name) {
+  if (!confirm(`Padam rekod "${name}"?`)) return;
+  try { await deleteDoc(doc(db, 'locations', id)); toast('ok', 'Rekod dipadam'); }
+  catch (e) { toast('err', e.message); }
+};
 
-  function haversine(lat1,lon1,lat2,lon2) {
-    const R=6371000, r=Math.PI/180;
-    const dLat=(lat2-lat1)*r, dLon=(lon2-lon1)*r;
-    const a=Math.sin(dLat/2)**2+Math.cos(lat1*r)*Math.cos(lat2*r)*Math.sin(dLon/2)**2;
-    return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-  }
+window.clearAll = async function () {
+  if (!records.length) { toast('info', 'Tiada rekod'); return; }
+  if (!confirm(`Padam semua ${records.length} rekod?`)) return;
+  try {
+    const batch = writeBatch(db);
+    records.forEach(r => batch.delete(doc(db, 'locations', r.id)));
+    await batch.commit(); toast('ok', 'Semua rekod dipadam');
+  } catch (e) { toast('err', e.message); }
+};
 
-  function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+window.exportCSV = function () {
+  if (!records.length) { toast('info', 'Tiada data'); return; }
+  const h = 'Nama,Latitude,Longitude,Accuracy,Sumber,Masa\n';
+  const r = records.map(r => {
+    const ts = r.timestamp ? new Date(r.timestamp.seconds * 1000).toISOString() : '';
+    return `"${r.name}",${r.latitude},${r.longitude},${Math.round(r.accuracy || 0)},"${r.source || ''}","${ts}"`;
+  }).join('\n');
+  dl('geotrack.csv', h + r, 'text/csv');
+  toast('ok', `${records.length} rekod dieksport`);
+};
 
-  document.getElementById('nameInp').addEventListener('keydown', e => { if (e.key==='Enter') window.startTracking(); });
+window.exportJSON = function () {
+  if (!records.length) { toast('info', 'Tiada data'); return; }
+  const data = records.map(r => ({ ...r, timestamp: r.timestamp ? new Date(r.timestamp.seconds * 1000).toISOString() : null }));
+  dl('geotrack.json', JSON.stringify(data, null, 2), 'application/json');
+  toast('ok', `${records.length} rekod dieksport`);
+};
+
+function dl(n, c, m) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([c], { type: m })); a.download = n; a.click(); }
+function ini(n) { return (n || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2); }
+function esc(s) { return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function toast(type, msg) {
+  const wrap = document.getElementById('toastWrap');
+  const el   = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<div class="t-dot"></div><span>${msg}</span>`;
+  wrap.appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.2s'; setTimeout(() => el.remove(), 200); }, 3500);
+}
 </script>
 </body>
 </html>
